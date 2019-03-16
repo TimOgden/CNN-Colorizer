@@ -1,7 +1,9 @@
 import matplotlib.pyplot as plt
 from keras.datasets import cifar10
 from keras.models import Sequential
-from keras.layers import Conv2D, LeakyReLU, Dropout, MaxPooling2D, UpSampling2D
+from keras.layers import Conv2D, UpSampling2D, Flatten, Dense, MaxPooling2D
+from keras.optimizers import Adam
+from keras.layers import LeakyReLU, Dropout, BatchNormalization
 import numpy as np
 import cv2
 
@@ -24,7 +26,41 @@ def build_model():
 		])
 	return model
 
-model = build_model()
+def build_resnet():
+	model = Sequential([
+		Conv2D(64, (3,3), padding='same', input_shape=(32,32,1), activation='relu', data_format='channels_last'),
+		Conv2D(64, (3,3), padding='same', activation='relu'),
+		MaxPooling2D(pool_size=2),
+
+		Conv2D(128, (3,3), padding='same', activation='relu'),
+		Conv2D(128, (3,3), padding='same', activation='relu'),
+		MaxPooling2D(pool_size=2),
+
+		Conv2D(256, (3,3), padding='same', activation='relu'),
+		Conv2D(256, (3,3), padding='same', activation='relu'),
+		MaxPooling2D(pool_size=2),
+
+		Conv2D(512, (3,3), padding='same', activation='relu'),
+		Conv2D(512, (3,3), padding='same', activation='relu'),
+		MaxPooling2D(pool_size=2),
+
+		Conv2D(256, (3,3), padding='same', activation='relu'),
+		BatchNormalization(),
+		UpSampling2D((2,2)),
+		Conv2D(128, (3,3), padding='same', activation='relu'),
+		BatchNormalization(),
+		UpSampling2D((2,2)),
+		Conv2D(64, (3,3), padding='same', activation='relu'),
+		BatchNormalization(),
+		UpSampling2D((2,2)),
+		Conv2D(64, (3,3), padding='same', activation='relu'),
+		BatchNormalization(),
+		Conv2D(3, (3,3), padding='same', activation='relu'),
+		UpSampling2D((2,2))
+	])
+	return model
+
+model = build_resnet()
 model.load_weights('../weights/best.h5')
 img = x_test[10]
 normed_img = img / 255.

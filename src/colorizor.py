@@ -1,7 +1,7 @@
 from keras.datasets import cifar10
-from keras.layers import Conv2D, UpSampling2D, Flatten, Dense, MaxPooling2D, Input
+from keras.layers import Conv2D, UpSampling2D, Flatten, Dense, MaxPooling2D
 from keras.optimizers import Adam
-from keras.layers import LeakyReLU, Dropout
+from keras.layers import LeakyReLU, Dropout, BatchNormalization
 from keras.models import Sequential
 from keras.callbacks import ModelCheckpoint, TensorBoard
 import matplotlib.pyplot as plt
@@ -41,6 +41,40 @@ def build_model():
 		])
 	return model
 
+def build_resnet():
+	model = keras.Sequential([
+		Conv2D(64, (3,3), padding='same', input_shape=(32,32,1), activation='relu', data_format='channels_last'),
+		Conv2D(64, (3,3), padding='same', activation='relu'),
+		MaxPooling2D(pool_size=2),
+
+		Conv2D(128, (3,3), padding='same', activation='relu'),
+		Conv2D(128, (3,3), padding='same', activation='relu'),
+		MaxPooling2D(pool_size=2),
+
+		Conv2D(256, (3,3), padding='same', activation='relu'),
+		Conv2D(256, (3,3), padding='same', activation='relu'),
+		MaxPooling2D(pool_size=2),
+
+		Conv2D(512, (3,3), padding='same', activation='relu'),
+		Conv2D(512, (3,3), padding='same', activation='relu'),
+		MaxPooling2D(pool_size=2),
+
+		Conv2D(256, (3,3), padding='same', activation='relu'),
+		BatchNormalization(),
+		UpSampling2D((2,2)),
+		Conv2D(128, (3,3), padding='same', activation='relu'),
+		BatchNormalization(),
+		UpSampling2D((2,2)),
+		Conv2D(64, (3,3), padding='same', activation='relu'),
+		BatchNormalization(),
+		UpSampling2D((2,2)),
+		Conv2D(64, (3,3), padding='same', activation='relu'),
+		BatchNormalization(),
+		Conv2D(3, (3,3), padding='same', activation='relu'),
+		UpSampling2D((2,2))
+	])
+	return model
+
 def build_perceptron():
 	model = Sequential([
 		Flatten(input_shape=(28,28)),
@@ -59,20 +93,20 @@ def generator(dataset):
 			gray_x = np.reshape(gray_x, (-1, gray_x.shape[0], gray_x.shape[1]))
 			gray_x = np.expand_dims(gray_x, axis=3)
 			x = np.reshape(x, (-1, x.shape[0], x.shape[1], x.shape[2]))
-			yield ({'conv2d_1_input': gray_x}, {'conv2d_3': x})
+			yield ({'conv2d_1_input': gray_x}, {'up_sampling2d_4': x})
 
 def stepsOf(val):
 	return ceil(len(val)/batch_size)
 
-model = build_model()
-model.compile(optimizer=keras.optimizers.Adam(lr=.0001), loss='mean_absolute_error', metrics=['accuracy'])
+model = build_resnet()
+model.compile(optimizer=keras.optimizers.Adam(lr=.001), loss='mean_absolute_error', metrics=['accuracy'])
 print(model.summary())
 
 #model.fit(x=x_train/255., y=y_train/255., batch_size=batch_size, epochs=10, verbose=1,
 #	shuffle=True, validation_data=[x_test/255., y_test/255.])
 
 save_best = ModelCheckpoint('../weights/best.h5', monitor='val_loss', save_best_only=True, save_weights_only=True, verbose=1, mode='min')
-checkpoint = ModelCheckpoint('../weights/chkpt_{epoch:04d}.h5', monitor='val_loss', save_best_only=False, verbose=1, mode='min', period=5)
+checkpoint = ModelCheckpoint('../weights/chkpt_{epoch:04d}.h5', monitor='val_loss', save_best_only=False, verbose=1, mode='min', period=10)
 tensorboard = TensorBoard(log_dir='../logs/{}'.format(time.time()), batch_size=64)
 
 model.fit_generator(generator(x_train), steps_per_epoch=stepsOf(x_train), epochs=500, shuffle=True,

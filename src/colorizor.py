@@ -146,7 +146,7 @@ def generator(dataset):
 			gray_x = np.reshape(gray_x, (-1, gray_x.shape[0], gray_x.shape[1]))
 			gray_x = np.expand_dims(gray_x, axis=3)
 			x = np.reshape(x, (-1, x.shape[0], x.shape[1], x.shape[2]))
-			yield ({'input_1': gray_x/255.}, {'conv2d_24': x/255.})
+			yield ({'input_1': gray_x/255.}, {'conv2d_24': gray_x/255.})
 
 def stepsOf(val):
 	return ceil(len(val)/batch_size)

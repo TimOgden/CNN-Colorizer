@@ -107,7 +107,7 @@ def build_resnet():
 		UpSampling2D((2,2)),
 		Conv2D(64, (3,3), padding='same', activation='relu'),
 		BatchNormalization(),
-		Conv2D(3, (3,3), padding='same', activation='relu'),
+		Conv2D(1, (3,3), padding='same', activation='relu'),
 		UpSampling2D((2,2))
 	])
 	return model

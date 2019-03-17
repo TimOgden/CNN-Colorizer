@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 from keras.datasets import cifar10
 from keras.models import Sequential, Model
 from keras.layers import *
-from keras.optimizers import Adam
+from keras.optimizers import Adam, Nadam
 import numpy as np
 import cv2
 
@@ -47,12 +47,11 @@ def build_unet(pretrained_weights=None, input_size=(32,32,1)):
 	merge9 = concatenate([conv1,up9], axis = 3)
 	conv9 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge9)
 	conv9 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv9)
-	conv9 = Conv2D(3, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv9)
-	conv10 = Conv2D(1, 1, activation = 'sigmoid')(conv9)
+	conv10 = Conv2D(3, 1, activation = 'sigmoid')(conv9)
 
 	model = Model(input = inputs, output = conv10)
 
-	model.compile(optimizer = Adam(lr = 1e-4), loss = 'mean_absolute_error', metrics = ['accuracy'])
+	model.compile(optimizer = Adam(lr=1e-3, decay=1e-5), loss = 'mean_absolute_error')
 	
 	#model.summary()
 
@@ -107,12 +106,12 @@ def build_resnet():
 		UpSampling2D((2,2)),
 		Conv2D(64, (3,3), padding='same', activation='relu'),
 		BatchNormalization(),
-		Conv2D(1, (3,3), padding='same', activation='relu'),
+		Conv2D(3, (3,3), padding='same', activation='relu'),
 		UpSampling2D((2,2))
 	])
 	return model
 
-model = build_unet(pretrained_weights= '../weights/best_same.h5')
+model = build_unet(pretrained_weights= '../weights/best.h5')
 #model = build_model()
 
 
@@ -135,9 +134,9 @@ print(normed_gray.shape)
 recolored = model.predict(normed_gray)*255.
 print(recolored[0][0][0])
 print(recolored.shape)
-#recolored = np.reshape(recolored, (recolored.shape[1], recolored.shape[2], recolored.shape[3]))
-recolored = np.reshape(recolored, (recolored.shape[1], recolored.shape[2]))
-print(recolored.shape)
+recolored = np.reshape(recolored, (recolored.shape[1], recolored.shape[2], recolored.shape[3]))
+#recolored = np.reshape(recolored, (recolored.shape[1], recolored.shape[2]))
+print(np.amax(recolored), np.amin(recolored))
 #recolored *= 255.
 plt.subplot(1,4,3)
 plt.title('CNN Prediction')
@@ -146,6 +145,6 @@ plt.imshow(recolored, cmap='gray')
 
 plt.subplot(1,4,4)
 plt.title('Prediction - Actual')
-plt.imshow(recolored - gray_x)
+plt.imshow(recolored - img)
 plt.colorbar()
 plt.show()

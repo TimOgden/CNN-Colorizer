@@ -1,6 +1,6 @@
 from keras.datasets import cifar10
 from keras.layers import *
-from keras.optimizers import Adam
+from keras.optimizers import Adam, Nadam
 from keras.models import Sequential, Model
 from keras.callbacks import ModelCheckpoint, TensorBoard
 import matplotlib.pyplot as plt
@@ -14,7 +14,7 @@ print(x_train.shape, x_test.shape)
 #x_train = np.reshape(x_train, (-1, x_train.shape[0], x_train.shape[1], x_train.shape[2]))
 #x_test = np.reshape(x_test, (-1, x_test.shape[0], x_test.shape[1], x_train.shape[2]))
 print(x_train.shape, x_test.shape)
-batch_size = 64
+batch_size = 128
 #categories = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
 
 def plot_rand_imgs():
@@ -63,12 +63,11 @@ def build_unet(pretrained_weights=None, input_size=(32,32,1)):
 	merge9 = concatenate([conv1,up9], axis = 3)
 	conv9 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge9)
 	conv9 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv9)
-	conv9 = Conv2D(3, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv9)
-	conv10 = Conv2D(3, 1, activation = 'relu')(conv9)
+	conv10 = Conv2D(3, 1, activation = 'sigmoid')(conv9)
 
 	model = Model(input = inputs, output = conv10)
 
-	model.compile(optimizer = Adam(lr = 1e-4), loss = 'mean_absolute_error', metrics = ['accuracy'])
+	model.compile(optimizer = Adam(lr=1e-3, decay=1e-5), loss = 'mean_absolute_error')
 	
 	#model.summary()
 
@@ -146,7 +145,7 @@ def generator(dataset):
 			gray_x = np.reshape(gray_x, (-1, gray_x.shape[0], gray_x.shape[1]))
 			gray_x = np.expand_dims(gray_x, axis=3)
 			x = np.reshape(x, (-1, x.shape[0], x.shape[1], x.shape[2]))
-			yield ({'input_1': gray_x/255.}, {'conv2d_24': x/255.})
+			yield ({'input_1': gray_x/255.}, {'conv2d_23': x/255.})
 
 def stepsOf(val):
 	return ceil(len(val)/batch_size)
@@ -163,11 +162,11 @@ if __name__=='__main__':
 
 	save_best = ModelCheckpoint('../weights/best.h5', monitor='val_loss', save_best_only=True, save_weights_only=True, verbose=1, mode='min')
 	checkpoint = ModelCheckpoint('../weights/chkpt_{epoch:04d}.h5', monitor='val_loss', save_best_only=False, verbose=1, mode='min', period=10)
-	tensorboard = TensorBoard(log_dir='../logs/{}'.format(time.time()), batch_size=64)
+	tensorboard = TensorBoard(log_dir='../logs/{}'.format(time.time()), batch_size=batch_size)
 
-	model.fit_generator(generator(x_train), steps_per_epoch=stepsOf(x_train), epochs=500, shuffle=True,
+	model.fit_generator(generator(x_train), steps_per_epoch=stepsOf(x_train), epochs=500, shuffle=False,
 		validation_data=generator(x_test), validation_steps=stepsOf(x_test), callbacks=[save_best, checkpoint, tensorboard])
 	model.save('../weights/colorizor.h5')
 
 	acc = model.evaluate(x_test)
-	print(acc[1])
+	print(acc[0])

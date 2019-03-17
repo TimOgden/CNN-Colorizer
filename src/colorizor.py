@@ -6,6 +6,7 @@ from keras.callbacks import ModelCheckpoint, TensorBoard
 import matplotlib.pyplot as plt
 import numpy as np
 import keras
+import keras.backend as K
 from math import ceil
 import time
 import cv2
@@ -15,6 +16,7 @@ print(x_train.shape, x_test.shape)
 #x_test = np.reshape(x_test, (-1, x_test.shape[0], x_test.shape[1], x_train.shape[2]))
 print(x_train.shape, x_test.shape)
 batch_size = 128
+beta = .2
 #categories = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
 
 def plot_rand_imgs():
@@ -23,7 +25,21 @@ def plot_rand_imgs():
 		plt.imshow(x_train[i+int(rand)])
 		plt.show()
 
+def mae_color_correct(y_true, y_pred):
+	diffs_np = tf.map_fn(lambda x : calc_diffs(x), y_pred)
+	return K.mean(K.abs(y_pred - y_true), axis=-1) - beta*(K.sum(K.abs(diffs_np)))
 
+def calc_diffs(y_pred):
+	diffs = []
+	for r in y_pred:
+		for c in r:
+			rg = c[0] - c[1]
+			gb = c[1] - c[2]
+			rb = c[0] - c[1]
+			diffs.append(rg)
+			diffs.append(gb)
+			diffs.append(rb)
+	return np.array(diffs)
 def build_unet(pretrained_weights=None, input_size=(32,32,1)):
 	inputs = Input(input_size)
 	conv1 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(inputs)
@@ -67,7 +83,7 @@ def build_unet(pretrained_weights=None, input_size=(32,32,1)):
 
 	model = Model(input = inputs, output = conv10)
 
-	model.compile(optimizer = Adam(lr=1e-3, decay=1e-5), loss = 'mean_absolute_error')
+	model.compile(optimizer = Adam(lr=1e-3, decay=1e-5), loss = mae_color_correct)
 	
 	#model.summary()
 
@@ -161,7 +177,7 @@ if __name__=='__main__':
 	#	shuffle=True, validation_data=[x_test/255., y_test/255.])
 
 	save_best = ModelCheckpoint('../weights/best.h5', monitor='val_loss', save_best_only=True, save_weights_only=True, verbose=1, mode='min')
-	checkpoint = ModelCheckpoint('../weights/chkpt_{epoch:04d}.h5', monitor='val_loss', save_best_only=False, verbose=1, mode='min', period=10)
+	checkpoint = ModelCheckpoint('../weights/chkpt_{epoch:04d}.h5', monitor='val_loss', save_best_only=False, verbose=1, mode='min', period=2)
 	tensorboard = TensorBoard(log_dir='../logs/{}'.format(time.time()), batch_size=batch_size)
 
 	model.fit_generator(generator(x_train), steps_per_epoch=stepsOf(x_train), epochs=500, shuffle=False,

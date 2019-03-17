@@ -113,38 +113,43 @@ def build_resnet():
 
 model = build_unet(pretrained_weights= '../weights/best.h5')
 #model = build_model()
+start_index = 0
+n_rows = 5
+c = 1
+for r in range(n_rows):
+	img = x_test[r+start_index]
+	gray_x = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+	normed_gray = gray_x / 255.
+	
+	plt.subplot(n_rows,4,c)
+	plt.title('Grayscale Image')
+	plt.imshow(gray_x, cmap='gray')
+	print(gray_x.shape)
+	c+=1
 
+	plt.subplot(n_rows,4,c)
+	plt.title('Original Image')
+	plt.imshow(img)
+	c+=1
 
-img = x_test[10]
-plt.subplot(1,4,1)
-plt.title('Original Image')
-plt.imshow(img)
+	normed_gray = np.reshape(normed_gray, (-1, gray_x.shape[0], gray_x.shape[1], 1))
+	print(normed_gray.shape)
 
-gray_x = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-normed_gray = gray_x / 255.
+	recolored = model.predict(normed_gray)
+	print(recolored[0][0][0])
+	print(recolored.shape)
+	recolored = np.reshape(recolored, (recolored.shape[1], recolored.shape[2], recolored.shape[3]))
+	#recolored = np.reshape(recolored, (recolored.shape[1], recolored.shape[2]))
+	print(np.amax(recolored), np.amin(recolored))
+	#recolored *= 255.
+	plt.subplot(n_rows,4,c)
+	plt.title('CNN Prediction')
+	plt.imshow(recolored, cmap='gray')
+	c+=1
 
-plt.subplot(1,4,2)
-plt.title('Grayscale Image')
-plt.imshow(gray_x, cmap='gray')
-print(gray_x.shape)
-
-normed_gray = np.reshape(normed_gray, (-1, gray_x.shape[0], gray_x.shape[1], 1))
-print(normed_gray.shape)
-
-recolored = model.predict(normed_gray)*255.
-print(recolored[0][0][0])
-print(recolored.shape)
-recolored = np.reshape(recolored, (recolored.shape[1], recolored.shape[2], recolored.shape[3]))
-#recolored = np.reshape(recolored, (recolored.shape[1], recolored.shape[2]))
-print(np.amax(recolored), np.amin(recolored))
-#recolored *= 255.
-plt.subplot(1,4,3)
-plt.title('CNN Prediction')
-plt.imshow(recolored, cmap='gray')
-
-
-plt.subplot(1,4,4)
-plt.title('Prediction - Actual')
-plt.imshow(recolored - img)
-plt.colorbar()
+	plt.subplot(n_rows,4,c)
+	plt.title('Prediction - Actual')
+	plt.imshow(np.absolute(recolored - img))
+	c+=1
+	#plt.colorbar()
 plt.show()

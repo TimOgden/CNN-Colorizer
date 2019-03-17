@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import keras
 import keras.backend as K
+import tensorflow as tf
 from math import ceil
 import time
 import cv2
@@ -26,20 +27,9 @@ def plot_rand_imgs():
 		plt.show()
 
 def mae_color_correct(y_true, y_pred):
-	diffs_np = tf.map_fn(lambda x : calc_diffs(x), y_pred)
-	return K.mean(K.abs(y_pred - y_true), axis=-1) - beta*(K.sum(K.abs(diffs_np)))
+	return K.mean(K.abs(y_pred - y_true), axis=-1) - beta*K.std(y_pred)
 
-def calc_diffs(y_pred):
-	diffs = []
-	for r in y_pred:
-		for c in r:
-			rg = c[0] - c[1]
-			gb = c[1] - c[2]
-			rb = c[0] - c[1]
-			diffs.append(rg)
-			diffs.append(gb)
-			diffs.append(rb)
-	return np.array(diffs)
+
 def build_unet(pretrained_weights=None, input_size=(32,32,1)):
 	inputs = Input(input_size)
 	conv1 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(inputs)

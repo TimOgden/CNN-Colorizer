@@ -48,7 +48,7 @@ def build_unet(pretrained_weights=None, input_size=(32,32,1)):
 	conv9 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge9)
 	conv9 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv9)
 	conv9 = Conv2D(3, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv9)
-	conv10 = Conv2D(3, 1, activation = 'sigmoid')(conv9)
+	conv10 = Conv2D(1, 1, activation = 'sigmoid')(conv9)
 
 	model = Model(input = inputs, output = conv10)
 
@@ -112,19 +112,19 @@ def build_resnet():
 	])
 	return model
 
-model = build_unet(pretrained_weights= '../weights/best.h5')
+model = build_unet(pretrained_weights= '../weights/best_same.h5')
 #model = build_model()
 
 
 img = x_test[10]
-plt.subplot(1,3,1)
+plt.subplot(1,4,1)
 plt.title('Original Image')
 plt.imshow(img)
 
 gray_x = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 normed_gray = gray_x / 255.
 
-plt.subplot(1,3,2)
+plt.subplot(1,4,2)
 plt.title('Grayscale Image')
 plt.imshow(gray_x, cmap='gray')
 print(gray_x.shape)
@@ -135,10 +135,17 @@ print(normed_gray.shape)
 recolored = model.predict(normed_gray)*255.
 print(recolored[0][0][0])
 print(recolored.shape)
-recolored = np.reshape(recolored, (recolored.shape[1], recolored.shape[2], recolored.shape[3]))
+#recolored = np.reshape(recolored, (recolored.shape[1], recolored.shape[2], recolored.shape[3]))
+recolored = np.reshape(recolored, (recolored.shape[1], recolored.shape[2]))
 print(recolored.shape)
 #recolored *= 255.
-plt.subplot(1,3,3)
+plt.subplot(1,4,3)
 plt.title('CNN Prediction')
-plt.imshow(recolored)
+plt.imshow(recolored, cmap='gray')
+
+
+plt.subplot(1,4,4)
+plt.title('Prediction - Actual')
+plt.imshow(recolored - gray_x)
+plt.colorbar()
 plt.show()

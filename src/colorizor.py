@@ -18,7 +18,7 @@ print(x_train.shape, x_test.shape)
 #x_test = np.reshape(x_test, (-1, x_test.shape[0], x_test.shape[1], x_train.shape[2]))
 print(x_train.shape, x_test.shape)
 batch_size = 128
-beta = .5
+beta = .6
 #categories = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
 
 def plot_rand_imgs():
@@ -42,28 +42,28 @@ def mae_color_std(y_true, y_pred):
 
 def build_unet(pretrained_weights=None, input_size=(32,32,1)):
 	inputs = Input(input_size)
-	conv1 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(inputs)
-	conv1 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv1)
-	pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
-	conv2 = Conv2D(128, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(pool1)
-	conv2 = Conv2D(128, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv2)
-	pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
-	conv3 = Conv2D(256, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(pool2)
-	conv3 = Conv2D(256, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv3)
-	pool3 = MaxPooling2D(pool_size=(2, 2))(conv3)
-	conv4 = Conv2D(512, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(pool3)
-	conv4 = Conv2D(512, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv4)
-	drop4 = Dropout(0.5)(conv4)
-	pool4 = MaxPooling2D(pool_size=(2, 2))(drop4)
+	conv1 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal', name='conv1a')(inputs)
+	conv1 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal', name='conv1b')(conv1)
+	pool1 = MaxPooling2D(pool_size=(2, 2), name='pool1')(conv1)
+	conv2 = Conv2D(128, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal', name='conv2a')(pool1)
+	conv2 = Conv2D(128, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal', name='conv2b')(conv2)
+	pool2 = MaxPooling2D(pool_size=(2, 2), name='pool2')(conv2)
+	conv3 = Conv2D(256, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal', name='conv3a')(pool2)
+	conv3 = Conv2D(256, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal', name='conv3b')(conv3)
+	pool3 = MaxPooling2D(pool_size=(2, 2), name='pool3')(conv3)
+	conv4 = Conv2D(512, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal', name='conv4a')(pool3)
+	conv4 = Conv2D(512, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal', name='conv4b')(conv4)
+	drop4 = Dropout(0.5, name='drop4')(conv4)
+	pool4 = MaxPooling2D(pool_size=(2, 2), name='pool4')(drop4)
 
-	conv5 = Conv2D(1024, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(pool4)
-	conv5 = Conv2D(1024, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv5)
-	drop5 = Dropout(0.5)(conv5)
+	conv5 = Conv2D(1024, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal', name='conv5a')(pool4)
+	conv5 = Conv2D(1024, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal', name='conv5b')(conv5)
+	drop5 = Dropout(0.5, name='drop5')(conv5)
 
-	up6 = Conv2D(512, 2, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(UpSampling2D(size = (2,2))(drop5))
+	up6 = Conv2D(512, 2, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal', name='conv6')(UpSampling2D(size = (2,2), name='up1')(drop5))
 	merge6 = concatenate([drop4,up6], axis = 3)
-	conv6 = Conv2D(512, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge6)
-	conv6 = Conv2D(512, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv6)
+	conv6 = Conv2D(512, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal', name='conv7a')(merge6)
+	conv6 = Conv2D(512, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal', name='conv7b')(conv6)
 
 	up7 = Conv2D(256, 2, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(UpSampling2D(size = (2,2))(conv6))
 	merge7 = concatenate([conv3,up7], axis = 3)
@@ -161,7 +161,7 @@ def generator(dataset):
 			gray_x = np.reshape(gray_x, (-1, gray_x.shape[0], gray_x.shape[1]))
 			gray_x = np.expand_dims(gray_x, axis=3)
 			x = np.reshape(x, (-1, x.shape[0], x.shape[1], x.shape[2]))
-			yield ({'input_1': gray_x/255.}, {'conv2d_23': x/255.})
+			yield ({'input_1': gray_x/255.}, {'conv2d_10': x/255.})
 
 def stepsOf(val):
 	return ceil(len(val)/batch_size)

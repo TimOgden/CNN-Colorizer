@@ -7,16 +7,18 @@ import matplotlib.pyplot as plt
 import numpy as np
 import keras
 import keras.backend as K
+import tensorflow as tf
 from math import ceil
 import time
 import cv2
+
 (x_train, _), (x_test, _) = cifar10.load_data()
 print(x_train.shape, x_test.shape)
 #x_train = np.reshape(x_train, (-1, x_train.shape[0], x_train.shape[1], x_train.shape[2]))
 #x_test = np.reshape(x_test, (-1, x_test.shape[0], x_test.shape[1], x_train.shape[2]))
 print(x_train.shape, x_test.shape)
 batch_size = 128
-beta = .6
+beta = .2
 #categories = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
 
 def plot_rand_imgs():
@@ -25,8 +27,18 @@ def plot_rand_imgs():
 		plt.imshow(x_train[i+int(rand)])
 		plt.show()
 
+def get_color_diff(val):
+	rg = val[0] - val[1]
+	K.print_tensor(val)
+	rb = val[0] - val[2]
+	gb = val[1] - val[2]
+	return abs(rg) + abs(rb) + abs(gb)
+
+
 def mae_color_correct(y_true, y_pred):
-	return K.mean(K.abs(y_pred - y_true), axis=-1) - beta*K.std(y_pred)
+	print('hello?')
+	return K.mean(K.abs(y_pred - y_true), axis=-1) - beta*K.mean(K.map_fn(get_color_diff,y_pred), axis=-1)
+
 
 
 def build_unet(pretrained_weights=None, input_size=(32,32,1)):
@@ -159,6 +171,8 @@ def stepsOf(val):
 
 if __name__=='__main__':
 	model = build_unet()
+	
+
 	#model.compile(optimizer=keras.optimizers.Adam(lr=.001), loss='mean_absolute_error', metrics=['accuracy'])
 	print(model.summary())
 
@@ -169,7 +183,7 @@ if __name__=='__main__':
 	checkpoint = ModelCheckpoint('../weights/chkpt_{epoch:04d}.h5', monitor='val_loss', save_best_only=False, verbose=1, mode='min', period=2)
 	tensorboard = TensorBoard(log_dir='../logs/{}'.format(time.time()), batch_size=batch_size)
 
-	model.fit_generator(generator(x_train), steps_per_epoch=stepsOf(x_train), epochs=500, shuffle=False,
+	model.fit_generator(generator(x_train), steps_per_epoch=stepsOf(x_train), epochs=5, shuffle=False,
 		validation_data=generator(x_test), validation_steps=stepsOf(x_test), callbacks=[save_best, checkpoint, tensorboard])
 	model.save('../weights/colorizor.h5')
 

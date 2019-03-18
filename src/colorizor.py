@@ -18,7 +18,7 @@ print(x_train.shape, x_test.shape)
 #x_test = np.reshape(x_test, (-1, x_test.shape[0], x_test.shape[1], x_train.shape[2]))
 print(x_train.shape, x_test.shape)
 batch_size = 128
-beta = .2
+beta = .5
 #categories = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
 
 def plot_rand_imgs():
@@ -29,17 +29,16 @@ def plot_rand_imgs():
 
 def get_color_diff(val):
 	rg = val[0] - val[1]
-	K.print_tensor(val)
 	rb = val[0] - val[2]
 	gb = val[1] - val[2]
 	return abs(rg) + abs(rb) + abs(gb)
 
 
 def mae_color_correct(y_true, y_pred):
-	print('hello?')
 	return K.mean(K.abs(y_pred - y_true), axis=-1) - beta*K.mean(K.map_fn(get_color_diff,y_pred), axis=-1)
 
-
+def mae_color_std(y_true, y_pred):
+	return K.mean(K.abs(y_pred - y_true), axis=-1) - beta*K.std(y_pred)
 
 def build_unet(pretrained_weights=None, input_size=(32,32,1)):
 	inputs = Input(input_size)
@@ -84,7 +83,7 @@ def build_unet(pretrained_weights=None, input_size=(32,32,1)):
 
 	model = Model(input = inputs, output = conv10)
 
-	model.compile(optimizer = Adam(lr=1e-4, decay=1e-5), loss = mae_color_correct)
+	model.compile(optimizer = Adam(lr=1e-4, decay=1e-5), loss = mae_color_std)
 	
 	#model.summary()
 
@@ -185,7 +184,3 @@ if __name__=='__main__':
 
 	model.fit_generator(generator(x_train), steps_per_epoch=stepsOf(x_train), epochs=5, shuffle=False,
 		validation_data=generator(x_test), validation_steps=stepsOf(x_test), callbacks=[save_best, checkpoint, tensorboard])
-	model.save('../weights/colorizor.h5')
-
-	acc = model.evaluate(x_test)
-	print(acc[0])

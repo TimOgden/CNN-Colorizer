@@ -12,8 +12,8 @@ import time
 
 model = build_unet(pretrained_weights= '../weights/best.h5')
 #model = build_model()
-start_index = 30
-n_rows = 5
+start_index = 70
+n_rows = 6
 c = 1
 for r in range(n_rows):
 	img = x_test[r+start_index]
@@ -39,15 +39,15 @@ for r in range(n_rows):
 	print('Took {} seconds'.format(end))
 	recolored = np.reshape(recolored, (recolored.shape[1], recolored.shape[2], recolored.shape[3]))
 	#recolored = np.reshape(recolored, (recolored.shape[1], recolored.shape[2]))
-	#recolored *= 255.
+	
 	plt.subplot(n_rows,4,c)
 	plt.title('CNN Prediction')
 	plt.imshow(recolored, cmap='gray')
 	c+=1
 
 	plt.subplot(n_rows,4,c)
-	plt.title('Prediction - Actual')
-	plt.imshow(np.absolute(recolored - img))
+	plt.title('Actual - Prediction')
+	plt.imshow(np.absolute(img - recolored))
 	c+=1
 	#plt.colorbar()
 plt.show()

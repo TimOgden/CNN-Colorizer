@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import keras
 import keras.backend as K
-import tensorflow as tf
 from math import ceil
 import time
 import cv2
@@ -17,7 +16,7 @@ print(x_train.shape, x_test.shape)
 #x_test = np.reshape(x_test, (-1, x_test.shape[0], x_test.shape[1], x_train.shape[2]))
 print(x_train.shape, x_test.shape)
 batch_size = 128
-beta = .2
+beta = .6
 #categories = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
 
 def plot_rand_imgs():
@@ -73,7 +72,7 @@ def build_unet(pretrained_weights=None, input_size=(32,32,1)):
 
 	model = Model(input = inputs, output = conv10)
 
-	model.compile(optimizer = Adam(lr=1e-3, decay=1e-5), loss = mae_color_correct)
+	model.compile(optimizer = Adam(lr=1e-4, decay=1e-5), loss = mae_color_correct)
 	
 	#model.summary()
 

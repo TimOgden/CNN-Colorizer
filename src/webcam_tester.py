@@ -35,14 +35,14 @@ def one_img():
 
 		plt.show()
 
-def stream(recordingTime = 5):
+def stream(recordingTime = 10):
 	# Check if camera opened successfully
 	if (cam.isOpened() == False): 
 		print("Unable to read camera feed")
 	 
 	# Define the codec and create VideoWriter object.The output is stored in 'outpy.avi' file.
-	out = cv2.VideoWriter('output.avi',cv2.VideoWriter_fourcc('M','J','P','G'), 10, (32,32))
-	orig = cv2.VideoWriter('orig.avi',cv2.VideoWriter_fourcc('M','J','P','G'), 10, (32,32))
+	out = cv2.VideoWriter('output.avi',cv2.VideoWriter_fourcc('M','J','P','G'), 15, (32,32))
+	orig = cv2.VideoWriter('orig.avi',cv2.VideoWriter_fourcc('M','J','P','G'), 15, (32,32))
 	start = time.time()
 
 	while(True):

@@ -28,10 +28,13 @@ def plot_rand_imgs():
 		plt.show()
 
 def get_color_diff(val):
-	rg = val[0] - val[1]
-	rb = val[0] - val[2]
-	gb = val[1] - val[2]
-	return abs(rg) + abs(rb) + abs(gb)
+	result = 0
+	for c in range(32*32):
+		rg = val[0][c][0] - val[0][c][1]
+		rb = val[0][c][0] - val[0][c][2]
+		gb = val[0][c][1] - val[0][c][2]
+		result += abs(rg) + abs(rb) + abs(gb)
+	return result / len(val)
 
 
 def mae_color_correct(y_true, y_pred):

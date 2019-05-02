@@ -8,15 +8,16 @@ import cv2
 from colorizor import build_unet
 import time
 
-(_,_), (x_test,_) = cifar10.load_data()
+x_test = ['C:/Users/Tim/ProgrammingProjects/CIFAR10/natural-images/natural_images/person/person_00{}.jpg'.format(x) for x in range(99)]
 
-model = build_unet(pretrained_weights= '../weights/best.h5')
+model = build_unet(pretrained_weights='../weights/best.h5', input_size=(256,256,1))
 #model = build_model()
-start_index = 70
+start_index = 90
 n_rows = 6
 c = 1
 for r in range(n_rows):
 	img = x_test[r+start_index]
+	img = cv2.imread(img)
 	gray_x = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 	normed_gray = gray_x / 255.
 
@@ -28,7 +29,7 @@ for r in range(n_rows):
 
 	plt.subplot(n_rows,4,c)
 	plt.title('Original Image')
-	plt.imshow(img)
+	plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
 	c+=1
 
 	normed_gray = np.reshape(normed_gray, (-1, gray_x.shape[0], gray_x.shape[1], 1))
@@ -42,12 +43,12 @@ for r in range(n_rows):
 	
 	plt.subplot(n_rows,4,c)
 	plt.title('CNN Prediction')
-	plt.imshow(recolored, cmap='gray')
+	plt.imshow(cv2.cvtColor(recolored, cv2.COLOR_BGR2RGB))
 	c+=1
 
 	plt.subplot(n_rows,4,c)
 	plt.title('Actual - Prediction')
-	plt.imshow(np.absolute(img - recolored))
+	plt.imshow(cv2.cvtColor(np.absolute(img - recolored), cv2.COLOR_BGR2RGB))
 	c+=1
-	#plt.colorbar()
+	plt.colorbar()
 plt.show()

@@ -2,10 +2,11 @@ import keras
 from keras.layers import Input, Conv2D, MaxPooling2D, Dropout, concatenate, UpSampling2D
 from keras.optimizers import Adam
 from keras.preprocessing.image import ImageDataGenerator
+from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping
 from img_simplifier import colormap
 import numpy as np
 
-def build_unet(pretrained_weights=None, input_size=(256,256)):
+def build_unet(pretrained_weights=None, input_size=(128,128)):
 	input1 = Input(input_size + (1,))
 	input2 = Input(input_size + (3,))
 
@@ -91,8 +92,8 @@ def generate_generator_multiple(generator, colormap_generator, batch_size, x_res
 			yield [x, x_colormap], y  #Yield both images and their mutual label
 
 if __name__ == '__main__':
-	x_res, y_res = 256, 256
-	batch_size = 8
+	x_res, y_res = int(256/2), int(256/2)
+	batch_size = 7
 	model = build_unet()
 	print(model.summary())
 	train_datagen = ImageDataGenerator(dtype=np.uint8)
@@ -101,4 +102,7 @@ if __name__ == '__main__':
 	generator = generate_generator_multiple(train_datagen, train_colormap_datagen, batch_size, x_res, y_res)
 	print('Created generator!')
 
-	model.fit_generator(generator, epochs=10, steps_per_epoch=np.ceil(107505/batch_size))
+	model.fit_generator(generator, epochs=10, steps_per_epoch=np.ceil(107505/batch_size),
+		callbacks=[ TensorBoard(log_dir='./logs', batch_size=batch_size),
+					EarlyStopping(patience=2),
+					ModelCheckpoint('model.h5', save_best_only=True, verbose=1)])

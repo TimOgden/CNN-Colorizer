@@ -5,9 +5,9 @@ from keras.preprocessing.image import ImageDataGenerator
 from img_simplifier import colormap
 import numpy as np
 
-def build_unet(pretrained_weights=None, input_size=(256,256,1)):
-	input1 = Input(input_size)
-	input2 = Input(input_size)
+def build_unet(pretrained_weights=None, input_size=(256,256)):
+	input1 = Input(input_size + (1,))
+	input2 = Input(input_size + (3,))
 
 	inputs = concatenate([input1, input2], axis=-1)
 	conv1 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal', name='conv1a')(inputs)
@@ -66,7 +66,7 @@ def generate_generator_multiple(generator, colormap_generator, batch_size, x_res
 													batch_size=batch_size,
 													class_mode=None,
 													color_mode='grayscale',
-													seed=1337,
+													seed=1,
 													shuffle=True)
 	
 	train_y_gen = generator.flow_from_directory('D:/imagenet_train/ILSVRC2014_DET_train',
@@ -74,7 +74,7 @@ def generate_generator_multiple(generator, colormap_generator, batch_size, x_res
 													batch_size=batch_size,
 													class_mode=None,
 													color_mode='rgb',
-													seed=1337,
+													seed=1,
 													shuffle=True)
 
 	train_x_colormap_gen = colormap_generator.flow_from_directory('D:/imagenet_train/ILSVRC2014_DET_train',
@@ -82,7 +82,7 @@ def generate_generator_multiple(generator, colormap_generator, batch_size, x_res
 													batch_size=batch_size,
 													class_mode=None,
 													color_mode='rgb',
-													seed=1337,
+													seed=1,
 													shuffle=True)
 	while True:
 			x = train_x_gen.next()
@@ -92,11 +92,11 @@ def generate_generator_multiple(generator, colormap_generator, batch_size, x_res
 
 if __name__ == '__main__':
 	x_res, y_res = 256, 256
-	batch_size = 32
+	batch_size = 8
 	model = build_unet()
 	print(model.summary())
-	train_datagen = ImageDataGenerator(rescale=1./255)
-	train_colormap_datagen = ImageDataGenerator(rescale=1./255, preprocessing_function=colormap)
+	train_datagen = ImageDataGenerator(dtype=np.uint8)
+	train_colormap_datagen = ImageDataGenerator(preprocessing_function=colormap, dtype=np.uint8)
 	
 	generator = generate_generator_multiple(train_datagen, train_colormap_datagen, batch_size, x_res, y_res)
 	print('Created generator!')

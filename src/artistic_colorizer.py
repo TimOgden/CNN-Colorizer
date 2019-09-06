@@ -1,10 +1,17 @@
 import keras
+import tensorflow as tf
 from keras.layers import Input, Conv2D, MaxPooling2D, Dropout, concatenate, UpSampling2D
 from keras.optimizers import Adam
 from keras.preprocessing.image import ImageDataGenerator
 from keras.callbacks import TensorBoard, ModelCheckpoint, EarlyStopping
+from outputvisualizer import OutputVisualizer
 from img_simplifier import colormap
 import numpy as np
+from PIL import ImageFile
+import matplotlib.pyplot as plt
+import cv2
+
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 def build_unet(pretrained_weights=None, input_size=(128,128)):
 	input1 = Input(input_size + (1,))
@@ -61,8 +68,49 @@ def build_unet(pretrained_weights=None, input_size=(128,128)):
 
 	return model
 
-def generate_generator_multiple(generator, colormap_generator, batch_size, x_res, y_res):
-	train_x_gen = generator.flow_from_directory('D:/imagenet_train/ILSVRC2014_DET_train',
+def reg_model(pretrained_weights=None, input_size=(128,128)):
+	input_a = Input(input_size + (1,))
+	input_b = Input(input_size + (3,))
+
+	# A
+	conv1a = Conv2D(64, 3, activation='relu', strides=2, padding='same')(input_a)
+	pool1a = MaxPooling2D(pool_size=2)(conv1a)
+
+	conv2a = Conv2D(128, 3, activation='relu', strides=2, padding='same')(pool1a)
+	pool2a = MaxPooling2D(pool_size=2)(conv2a)
+
+	# B
+	conv1b = Conv2D(64, 3, activation='relu', strides=2, padding='same')(input_b)
+	pool1b = MaxPooling2D(pool_size=2)(conv1b)
+
+	conv2b = Conv2D(128, 3, activation='relu', strides=2, padding='same')(pool1b)
+	pool2b = MaxPooling2D(pool_size=2)(conv2b)
+
+	combined = concatenate([pool2a, pool2b], axis=-1)
+
+	# Combined A + B
+	up3 = UpSampling2D(size=(4,4))(combined)
+	conv3 = Conv2D(64, 3, activation='relu', strides=2, padding='same')(up3)
+
+	up4 = UpSampling2D(size=(4,4))(conv3)
+	conv4 = Conv2D(3, 3, activation='relu', strides=2, padding='same')(up4)
+
+	up5 = UpSampling2D(size=(4,4))(conv4)
+	conv5 = Conv2D(32, 3, activation='relu', strides=2, padding='same')(up5)
+
+	up6 = UpSampling2D(size=(4,4))(conv5)
+	conv6 = Conv2D(3, 3, activation='sigmoid', strides=2, padding='same')(up6)
+
+	model = keras.models.Model(input = [input_a, input_b], output = conv6)
+	model.compile(optimizer = Adam(lr=1e-4, decay=1e-5), loss = 'mean_squared_error')
+	if(pretrained_weights):
+		model.load_weights(pretrained_weights)
+	return model
+
+
+
+def generate_generator_multiple(directory, generator, colormap_generator, batch_size, x_res, y_res, debug=False):
+	train_x_gen = generator.flow_from_directory(directory,
 													target_size=(x_res,y_res),
 													batch_size=batch_size,
 													class_mode=None,
@@ -70,7 +118,7 @@ def generate_generator_multiple(generator, colormap_generator, batch_size, x_res
 													seed=1,
 													shuffle=True)
 	
-	train_y_gen = generator.flow_from_directory('D:/imagenet_train/ILSVRC2014_DET_train',
+	train_y_gen = generator.flow_from_directory(directory,
 													target_size=(x_res,y_res),
 													batch_size=batch_size,
 													class_mode=None,
@@ -78,7 +126,7 @@ def generate_generator_multiple(generator, colormap_generator, batch_size, x_res
 													seed=1,
 													shuffle=True)
 
-	train_x_colormap_gen = colormap_generator.flow_from_directory('D:/imagenet_train/ILSVRC2014_DET_train',
+	train_x_colormap_gen = colormap_generator.flow_from_directory(directory,
 													target_size=(x_res,y_res),
 													batch_size=batch_size,
 													class_mode=None,
@@ -89,20 +137,45 @@ def generate_generator_multiple(generator, colormap_generator, batch_size, x_res
 			x = train_x_gen.next()
 			x_colormap = train_x_colormap_gen.next()
 			y = train_y_gen.next()
+			if debug:
+				plt.subplot(131)
+				plt.imshow(x[0], cmap=plt.cm.gray)
+				plt.title('Grayscale Image')
+				plt.subplot(132)
+				plt.imshow(x_colormap[0])
+				plt.title('Simple Colormap')
+				plt.subplot(134)
+				plt.imshow(y[0])
+				plt.title('Actual Colored Image')
+				plt.show()
 			yield [x, x_colormap], y  #Yield both images and their mutual label
 
 if __name__ == '__main__':
-	x_res, y_res = int(256/2), int(256/2)
-	batch_size = 7
-	model = build_unet()
-	print(model.summary())
-	train_datagen = ImageDataGenerator(dtype=np.uint8)
-	train_colormap_datagen = ImageDataGenerator(preprocessing_function=colormap, dtype=np.uint8)
-	
-	generator = generate_generator_multiple(train_datagen, train_colormap_datagen, batch_size, x_res, y_res)
-	print('Created generator!')
+	x_res, y_res = int(256/4), int(256/4)
+	batch_size = 64
+	image_url = 'C:/Users/Tim/ProgrammingProjects/imagenet_val_short/short/ILSVRC2012_val_00001701.jpeg'
+	with tf.device('/gpu:0'):
+		model = reg_model(input_size=(x_res,y_res))
+		print(model.summary())
+		datagen = ImageDataGenerator(dtype=np.uint8)
+		colormap_datagen = ImageDataGenerator(preprocessing_function=colormap, dtype=np.uint8)
+		
+		train_generator = generate_generator_multiple('D:/imagenet_train/', datagen, colormap_datagen,
+														batch_size, x_res, y_res)
+		print('Created generator!')
+		val_generator = generate_generator_multiple('D:/imagenet_val/', datagen, colormap_datagen,
+														batch_size, x_res, y_res)
+		print('Created validation generator!')
 
-	model.fit_generator(generator, epochs=10, steps_per_epoch=np.ceil(107505/batch_size),
-		callbacks=[ TensorBoard(log_dir='./logs', batch_size=batch_size),
-					EarlyStopping(patience=2),
-					ModelCheckpoint('model.h5', save_best_only=True, verbose=1)])
+		#model.fit_generator(train_generator, validation_data=val_generator, epochs=10, 
+		#	steps_per_epoch=np.ceil(107505/batch_size), validation_steps=np.ceil(20101/batch_size),
+		#	callbacks=[ TensorBoard(log_dir='./logs', batch_size=batch_size),
+		#				EarlyStopping(patience=2),
+		#				OutputVisualizer(x_train),
+		#				ModelCheckpoint('model.{epoch:02d}-{val_loss:.2f}.h5', save_best_only=True, verbose=1, save_weights_only=True)])
+		model.fit_generator(train_generator, validation_data=val_generator, epochs=10, 
+			steps_per_epoch=np.ceil(107505/batch_size), validation_steps=np.ceil(20121/batch_size),
+			callbacks=[ TensorBoard(log_dir='./logs', batch_size=batch_size),
+						EarlyStopping(patience=2),
+						OutputVisualizer(image_url),
+						ModelCheckpoint('model.{epoch:02d}-{val_loss:.2f}.h5', save_best_only=True, verbose=1, save_weights_only=True)])

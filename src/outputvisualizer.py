@@ -15,8 +15,8 @@ class OutputVisualizer(Callback):
 		prediction = self.model.predict([self.image.reshape(-1,64,64,1), colormap(self.color_image).reshape(-1,64,64,3)], batch_size=2)
 		self.out_log.append(prediction)
 		if save_ims:
-			cv2.imwrite('epoch{}gray.jpg'.format(epoch))
-			cv2.imwrite('epoch{}predict.jpg'.format(epoch))
+			cv2.imwrite('../logs/pictures/epoch{}gray.jpg'.format(epoch))
+			cv2.imwrite('../logs/pictures/epoch{}predict.jpg'.format(epoch))
 		plt.subplot(121)
 		plt.imshow(self.image, cmap=plt.cm.gray)
 		plt.title('Grayscale Image')

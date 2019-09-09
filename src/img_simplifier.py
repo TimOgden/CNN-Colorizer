@@ -29,7 +29,7 @@ def colormap(img):
 	img = img.astype(np.uint8)
 	#print(img.dtype, img[0][0])
 	blur_img = cv2.GaussianBlur(img, (5,5), 0)
-	return cv2.pyrMeanShiftFiltering(blur_img, 20, 45, 3) / 255.
+	return cv2.pyrMeanShiftFiltering(blur_img, 20, 45, 3).astype(np.float64)
 
 if __name__=='__main__':
 	print(sys.argv[1])

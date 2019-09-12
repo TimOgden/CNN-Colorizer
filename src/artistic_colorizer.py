@@ -99,8 +99,9 @@ def reg_model(pretrained_weights=None, input_size=(128,128)):
 	up3 = UpSampling2D(size=(4,4))(combined)
 	conv3 = Conv2D(64, 3, strides=2, padding='same')(up3)
 	act3 = LeakyReLU()(conv3)
+	drop3 = Dropout(.25)(act3)
 
-	up4 = UpSampling2D(size=(4,4))(act3)
+	up4 = UpSampling2D(size=(4,4))(drop3)
 	conv4 = Conv2D(3, 3, strides=2, padding='same')(up4)
 	act4 = LeakyReLU()(conv4)
 
@@ -112,7 +113,7 @@ def reg_model(pretrained_weights=None, input_size=(128,128)):
 	conv6 = Conv2D(3, 3, activation='sigmoid', strides=2, padding='same')(up6)
 
 	model = keras.models.Model(input = [input_a, input_b], output = conv6)
-	model.compile(optimizer = Adam(lr=1e-3), loss = 'mean_absolute_error')
+	model.compile(optimizer = Adam(lr=1e-3, decay=1e-5), loss = 'mean_absolute_error')
 	if(pretrained_weights):
 		model.load_weights(pretrained_weights)
 	return model
@@ -164,7 +165,7 @@ def generate_generator_multiple(directory, generator, colormap_generator, batch_
 if __name__ == '__main__':
 	x_res, y_res = int(256/4), int(256/4)
 	batch_size = 64
-	image_url = 'C:/Users/Tim/ProgrammingProjects/imagenet_val_short/short/ILSVRC2012_val_00001701.jpeg'
+	images_url = 'C:/Users/Tim/ProgrammingProjects/imagenet_val_short/short/'
 	with tf.device('/gpu:0'):
 		model = reg_model(input_size=(x_res,y_res))
 		print(model.summary())
@@ -172,7 +173,7 @@ if __name__ == '__main__':
 		colormap_datagen = ImageDataGenerator(preprocessing_function=colormap, dtype=np.uint8, rescale=1./255)
 		
 		train_generator = generate_generator_multiple('D:/imagenet_train/', datagen, colormap_datagen,
-														batch_size, x_res, y_res, debug=True)
+														batch_size, x_res, y_res, debug=False)
 		print('Created generator!')
 		val_generator = generate_generator_multiple('D:/imagenet_val/', datagen, colormap_datagen,
 														batch_size, x_res, y_res)
@@ -184,9 +185,9 @@ if __name__ == '__main__':
 		#				EarlyStopping(patience=2),
 		#				OutputVisualizer(x_train),
 		#				ModelCheckpoint('model.{epoch:02d}-{val_loss:.2f}.h5', save_best_only=True, verbose=1, save_weights_only=True)])
-		model.fit_generator(train_generator, validation_data=val_generator, epochs=10, 
-			steps_per_epoch=np.ceil(100000/batch_size), validation_steps=np.ceil(20121/batch_size),
+		model.fit_generator(train_generator, validation_data=val_generator, epochs=10,
+			steps_per_epoch=np.ceil(1e5/batch_size), validation_steps=np.ceil(2e4/batch_size),
 			callbacks=[ TensorBoard(log_dir='./logs', batch_size=batch_size),
-						EarlyStopping(patience=2),
-						OutputVisualizer(image_url),
-						ModelCheckpoint('model.{epoch:02d}-{val_loss:.2f}.h5', save_best_only=True, verbose=1, save_weights_only=True)])
+						EarlyStopping(patience=1, restore_best_weights=True),
+						OutputVisualizer(images_url, time_to_display_ims=5, save_ims=True),
+						ModelCheckpoint('model-epoch{epoch:02d}-{val_loss:.2f}.h5', save_best_only=True, verbose=1, save_weights_only=True)])

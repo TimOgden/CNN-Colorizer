@@ -11,8 +11,37 @@ import numpy as np
 from PIL import ImageFile
 import matplotlib.pyplot as plt
 import cv2
+import time, datetime
+import csv
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
+
+def gen_seed():
+	seed = np.random.randint(0,999999999)
+	seed_proven_unique = False
+	while not seed_proven_unique:
+		try:
+			with open('seeds.txt', 'r') as f:
+				seeds = csv.reader(f)
+				#print(seeds)
+				for val in seeds.__next__():
+					#print(val)
+					try:
+						if int(val) == seed:
+							seed = np.random.randint(0,999999999)
+							continue
+					except:
+						pass
+				seed_proven_unique = True
+		except:
+			seed_proven_unique = True
+	return seed
+
+def store_seed(seed, debug=False):
+	with open('seeds.txt', 'a') as f:
+		f.write('{},'.format(seed))
+	if debug:
+		print('Stored seed!')
 
 def build_unet(pretrained_weights=None, input_size=(128,128)):
 	input1 = Input(input_size + (1,))
@@ -40,22 +69,22 @@ def build_unet(pretrained_weights=None, input_size=(128,128)):
 	drop5 = Dropout(0.25, name='drop5')(conv5)
 
 	up6 = Conv2D(512, 2, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal', name='conv6')(UpSampling2D(size = (2,2), name='up1')(drop5))
-	merge6 = concatenate([drop4,up6], axis = 3)
+	merge6 = concatenate([drop4,up6], axis = -1)
 	conv6 = Conv2D(512, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal', name='conv7a')(merge6)
 	conv6 = Conv2D(512, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal', name='conv7b')(conv6)
 
 	up7 = Conv2D(256, 2, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(UpSampling2D(size = (2,2))(conv6))
-	merge7 = concatenate([conv3,up7], axis = 3)
+	merge7 = concatenate([conv3,up7], axis = -1)
 	conv7 = Conv2D(256, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge7)
 	conv7 = Conv2D(256, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv7)
 
 	up8 = Conv2D(128, 2, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(UpSampling2D(size = (2,2))(conv7))
-	merge8 = concatenate([conv2,up8], axis = 3)
+	merge8 = concatenate([conv2,up8], axis = -1)
 	conv8 = Conv2D(128, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge8)
 	conv8 = Conv2D(128, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv8)
 
 	up9 = Conv2D(64, 2, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(UpSampling2D(size = (2,2))(conv8))
-	merge9 = concatenate([conv1,up9], axis = 3)
+	merge9 = concatenate([conv1,up9], axis = -1)
 	conv9 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge9)
 	conv9 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv9)
 	conv10 = Conv2D(3, 1, activation = 'sigmoid')(conv9)
@@ -78,39 +107,33 @@ def reg_model(pretrained_weights=None, input_size=(128,128)):
 	# A
 	conv1a = Conv2D(64, 1, strides=2, padding='same')(input_a)
 	act1a = LeakyReLU()(conv1a)
-	pool1a = MaxPooling2D(pool_size=2)(act1a)
 
-	conv2a = Conv2D(128, 1, strides=2, padding='same')(pool1a)
+	conv2a = Conv2D(128, 1, strides=2, padding='same')(act1a)
 	act2a = LeakyReLU()(conv2a)
-	pool2a = MaxPooling2D(pool_size=2)(act2a)
 
 	# B
 	conv1b = Conv2D(64, 3, strides=2, padding='same')(input_b)
 	act1b = LeakyReLU()(conv1b)
-	pool1b = MaxPooling2D(pool_size=2)(act1b)
 
-	conv2b = Conv2D(128, 3, strides=2, padding='same')(pool1b)
+	conv2b = Conv2D(128, 3, strides=2, padding='same')(act1b)
 	act2b = LeakyReLU()(conv2b)
-	pool2b = MaxPooling2D(pool_size=2)(act2b)
 
-	combined = concatenate([pool2a, pool2b], axis=-1)
+	combined = concatenate([act2a, act2b], axis=-1)
 
 	# Combined A + B
-	up3 = UpSampling2D(size=(4,4))(combined)
-	conv3 = Conv2D(64, 3, strides=2, padding='same')(up3)
-	act3 = LeakyReLU()(conv3)
-	drop3 = Dropout(.25)(act3)
+	conv3 = Conv2D(64, 3, strides=1, padding='same')(combined)
+	up3 = UpSampling2D()(conv3)
+	act3 = LeakyReLU()(up3)
 
-	up4 = UpSampling2D(size=(4,4))(drop3)
-	conv4 = Conv2D(3, 3, strides=2, padding='same')(up4)
-	act4 = LeakyReLU()(conv4)
+	conv4 = Conv2D(32, 3, strides=1, padding='same')(act3)
+	up4 = UpSampling2D()(conv4)
+	act4 = LeakyReLU()(up4)
 
-	up5 = UpSampling2D(size=(4,4))(act4)
-	conv5 = Conv2D(32, 3, strides=2, padding='same')(up5)
-	act5 = LeakyReLU()(conv5)
+	conv5 = Conv2D(16, 3, strides=1, padding='same')(act4)
+	up5 = UpSampling2D()(conv5)
+	act5 = LeakyReLU()(up5)
 
-	up6 = UpSampling2D(size=(4,4))(act5)
-	conv6 = Conv2D(3, 3, activation='sigmoid', strides=2, padding='same')(up6)
+	conv6 = Conv2D(3, 1, activation='sigmoid', strides=2, padding='same')(act5)
 
 	model = keras.models.Model(input = [input_a, input_b], output = conv6)
 	model.compile(optimizer = Adam(lr=1e-3, decay=1e-5), loss = 'mean_absolute_error')
@@ -165,7 +188,7 @@ def generate_generator_multiple(directory, generator, colormap_generator, batch_
 if __name__ == '__main__':
 	x_res, y_res = int(256/4), int(256/4)
 	batch_size = 64
-	images_url = 'C:/Users/Tim/ProgrammingProjects/imagenet_val_short/short/'
+	seed = gen_seed()
 	with tf.device('/gpu:0'):
 		model = reg_model(input_size=(x_res,y_res))
 		print(model.summary())
@@ -178,16 +201,11 @@ if __name__ == '__main__':
 		val_generator = generate_generator_multiple('D:/imagenet_val/', datagen, colormap_datagen,
 														batch_size, x_res, y_res)
 		print('Created validation generator!')
-
-		#model.fit_generator(train_generator, validation_data=val_generator, epochs=10, 
-		#	steps_per_epoch=np.ceil(107505/batch_size), validation_steps=np.ceil(20101/batch_size),
-		#	callbacks=[ TensorBoard(log_dir='./logs', batch_size=batch_size),
-		#				EarlyStopping(patience=2),
-		#				OutputVisualizer(x_train),
-		#				ModelCheckpoint('model.{epoch:02d}-{val_loss:.2f}.h5', save_best_only=True, verbose=1, save_weights_only=True)])
+		store_seed(seed)
 		model.fit_generator(train_generator, validation_data=val_generator, epochs=10,
-			steps_per_epoch=np.ceil(1e5/batch_size), validation_steps=np.ceil(2e4/batch_size),
-			callbacks=[ TensorBoard(log_dir='./logs', batch_size=batch_size),
+			steps_per_epoch=np.ceil(1e5/(batch_size*2)), validation_steps=np.ceil(2e4/(batch_size*2)),
+			callbacks=[ TensorBoard(log_dir='../logs', batch_size=batch_size),
 						EarlyStopping(patience=1, restore_best_weights=True),
-						OutputVisualizer(images_url, time_to_display_ims=5, save_ims=True),
-						ModelCheckpoint('model-epoch{epoch:02d}-{val_loss:.2f}.h5', save_best_only=True, verbose=1, save_weights_only=True)])
+						ModelCheckpoint('../weights/epoch{epoch:02d}-%s.h5' % (seed),
+								save_best_only=True, verbose=1, save_weights_only=True)])
+		

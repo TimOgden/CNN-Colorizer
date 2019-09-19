@@ -187,10 +187,11 @@ def generate_generator_multiple(directory, generator, colormap_generator, batch_
 
 if __name__ == '__main__':
 	x_res, y_res = int(256/4), int(256/4)
-	batch_size = 64
+	batch_size = 80
 	seed = gen_seed()
+	images_url = 'C:/Users/Tim/ProgrammingProjects/imagenet_val_short/short/'
 	with tf.device('/gpu:0'):
-		model = reg_model(input_size=(x_res,y_res))
+		model = reg_model(input_size=(x_res,y_res), pretrained_weights='../weights/epoch01-55915012.h5')
 		print(model.summary())
 		datagen = ImageDataGenerator(dtype=np.uint8, rescale=1./255)
 		colormap_datagen = ImageDataGenerator(preprocessing_function=colormap, dtype=np.uint8, rescale=1./255)
@@ -202,10 +203,11 @@ if __name__ == '__main__':
 														batch_size, x_res, y_res)
 		print('Created validation generator!')
 		store_seed(seed)
-		model.fit_generator(train_generator, validation_data=val_generator, epochs=10,
+		model.fit_generator(train_generator, validation_data=val_generator, epochs=10, initial_epoch=1,
 			steps_per_epoch=np.ceil(1e5/(batch_size*2)), validation_steps=np.ceil(2e4/(batch_size*2)),
 			callbacks=[ TensorBoard(log_dir='../logs', batch_size=batch_size),
 						EarlyStopping(patience=1, restore_best_weights=True),
+						OutputVisualizer(images_url, time_to_display_ims=5),
 						ModelCheckpoint('../weights/epoch{epoch:02d}-%s.h5' % (seed),
 								save_best_only=True, verbose=1, save_weights_only=True)])
 		

@@ -26,8 +26,9 @@ def define_model(x_res, y_res):
 	return model
 
 def train(model, generator, n_epochs, batch_size, initial_epoch=0, callbacks=None):
-	model.fit_generator(generator, steps_per_epoch=np.ceil(101000/batch_size), epochs=n_epochs,
+	history = model.fit_generator(generator, steps_per_epoch=np.ceil(101000/batch_size), epochs=n_epochs,
 						initial_epoch=initial_epoch, callbacks=callbacks)
+	return history
 
 def custom_generator(color_generator, grayscale_generator):
 	while True:
@@ -36,17 +37,19 @@ def custom_generator(color_generator, grayscale_generator):
 		yield (x[0],y[0])
 
 if __name__ =='__main__':
-	model = define_model(64,64)
+	x_res, y_res = 256, 256
+	model = define_model(x_res, y_res)
 	batch_size = 32
 	print(model.summary())
 	datagen = ImageDataGenerator(horizontal_flip=True, preprocessing_function=simplify_img_random_vals,
 									rescale=1/255., validation_split=.2)
 	datagen_y = ImageDataGenerator(horizontal_flip=True, rescale=1/255., validation_split=.2)
-	generator = datagen.flow_from_directory('./imgs', target_size=(64,64), seed=123, batch_size=batch_size)
-	generator_y = datagen_y.flow_from_directory('./imgs', target_size=(64,64), seed=123, batch_size=batch_size)
+	generator = datagen.flow_from_directory('./imgs', target_size=(x_res, y_res), seed=123, batch_size=batch_size)
+	generator_y = datagen_y.flow_from_directory('./imgs', target_size=(x_res, y_res), seed=123, batch_size=batch_size)
 	train_generator = custom_generator(generator, generator_y)
 	ckpt = ModelCheckpoint('./weights/epoch{epoch:02d}.hdf5', save_best_only=True)
 	tensorboard = TensorBoard(log_dir='./logs')
 
 
-	train(model, train_generator, 10, batch_size, callbacks=[ckpt, tensorboard])
+	history = train(model, train_generator, 2, batch_size, callbacks=[ckpt, tensorboard])
+	np.save('history', history)

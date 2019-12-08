@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import itertools
 
-def simplify_img_random_vals(img, grid_size=4):
+def simplify_img_random_vals(img, grid_size=None):
 	''' Quick and easy function to simplify the img with random parameters.
 		Combination of simplify_img and draw_squares
 
@@ -11,6 +11,8 @@ def simplify_img_random_vals(img, grid_size=4):
 	img (numpy.ndarray) - input color image
 	grid_size (int) - the size of each square in the grid
 	'''
+	if not grid_size:
+		grid_size = img.shape[0] // 16
 	percent_in_color = np.random.uniform(low=.01,high=.07)
 	square_size = int(np.random.uniform(low=2,high=16))
 	squares = simplify_img(img, percent_in_color=percent_in_color, grid_size=grid_size)

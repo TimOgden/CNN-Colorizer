@@ -47,18 +47,19 @@ def draw_squares(img, square, square_size=5):
 		# Need two for loops for each square
 		for r in range(x-square_size, x+square_size):
 			for c in range(y-square_size, y+square_size):
-				img[0][r][c] = square[(x,y)][0] # Get the color associated with the square
-				img[1][r][c] = square[(x,y)][1]
-				img[2][r][c] = square[(x,y)][2]
+				img[r][c] = square[(x,y)] # Get the color associated with the square
+				#img[r][c] = square[(x,y)][1]
+				#img[r][c] = square[(x,y)][2]
 	return img
 
 if __name__ =='__main__':
-	img = cv2.imread('oasis.png')
+	img = cv2.cvtColor(cv2.imread('oasis.png'), cv2.COLOR_BGR2RGB)
 	squares = simplify_img(img, percent_in_color=.01)
-	grayscale_3channels = np.tile(cv2.imread('oasis.png', 0), (3,1,1))
+	grayscale_3channels = cv2.cvtColor(cv2.imread('oasis.png', 0), 
+								cv2.COLOR_BGR2RGB)
 	print(grayscale_3channels.shape)
-	gray_img = draw_squares(grayscale_3channels, squares, square_size=32)
-	gray_img = np.swapaxes(np.swapaxes(gray_img,0,1), 1,2) # flip from channels_first to channels_last
+	gray_img = draw_squares(grayscale_3channels, squares, square_size=16)
+	#gray_img = np.swapaxes(np.swapaxes(gray_img,0,1), 1,2) # flip from channels_first to channels_last
 	plt.subplot(2,1,1)
 	plt.imshow(img)
 	plt.subplot(2,1,2)

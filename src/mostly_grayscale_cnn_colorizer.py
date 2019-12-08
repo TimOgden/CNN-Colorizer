@@ -26,14 +26,14 @@ def define_model(x_res, y_res):
 	return model
 
 def train(model, generator, n_epochs, batch_size, initial_epoch=0, callbacks=None):
-	model.fit_generator(generator, steps_per_epoch=np.ceil(1e6/batch_size), epochs=n_epochs,
+	model.fit_generator(generator, steps_per_epoch=np.ceil(101000/batch_size), epochs=n_epochs,
 						initial_epoch=initial_epoch, callbacks=callbacks)
 
 def custom_generator(color_generator, grayscale_generator):
 	while True:
 		x = color_generator.next()
 		y = grayscale_generator.next()
-		yield {'conv2d_input': x, 'conv2d_8': y}
+		yield (x[0],y[0])
 
 if __name__ =='__main__':
 	model = define_model(64,64)

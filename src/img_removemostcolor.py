@@ -2,18 +2,27 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import itertools
-def simplify_img(img, percent_in_color=.1, square_size=32):
+
+def simplify_img_random_vals(img, grid_size=32):
+	''' Quick and easy function to simplify the img with random parameters.
+		Combination of simplify_img and draw_squares
+
+	Keyword arguments:
+	img (numpy.ndarray) - input color image
+	grid_size (int) - the size of each square in the grid
+	'''
+def simplify_img(img, percent_in_color=.1, grid_size=32):
 	''' Divides the image into a grid, chooses a percentage of the squares and gets the
 	color of the center pixel of each square.
 
 	Keyword arguments:
 	img (numpy.ndarray) - input color image
 	percent_in_color (float) - percentage of the squares to color
-	square_size - the size of each square in the grid (not necessarily the same as square_size in draw_squares)
+	grid_size - the size of each square in the grid (not necessarily the same as square_size in draw_squares)
 	'''
 	# Put the image into a grid
-	num_squares_per_row = img.shape[0] // square_size
-	num_squares_per_col = img.shape[1] // square_size
+	num_squares_per_row = img.shape[0] // grid_size
+	num_squares_per_col = img.shape[1] // grid_size
 	squares_count = int(np.floor(num_squares_per_row * num_squares_per_col))
 	squares = list(itertools.product(*[range(num_squares_per_row),range(num_squares_per_col)]))
 	
@@ -25,9 +34,9 @@ def simplify_img(img, percent_in_color=.1, square_size=32):
 	# Get the average color of the squares
 	grid_colors = {}
 	for square in chosen_squares:
-		print('Square[0]:', square[0],'Square[1]:', square[1],'square_size:', square_size)
-		x = square[0]*square_size+square_size//2
-		y = square[1]*square_size+square_size//2
+		print('Square[0]:', square[0],'Square[1]:', square[1],'grid_size:', grid_size)
+		x = square[0]*grid_size+grid_size//2
+		y = square[1]*grid_size+grid_size//2
 		color = img[x][y]
 		grid_colors[(x,y)] = color
 		print(color)
@@ -54,7 +63,7 @@ def draw_squares(img, square, square_size=5):
 
 if __name__ =='__main__':
 	img = cv2.cvtColor(cv2.imread('oasis.png'), cv2.COLOR_BGR2RGB)
-	squares = simplify_img(img, percent_in_color=.01)
+	squares = simplify_img(img, percent_in_color=.1)
 	grayscale_3channels = cv2.cvtColor(cv2.imread('oasis.png', 0), 
 								cv2.COLOR_BGR2RGB)
 	print(grayscale_3channels.shape)

@@ -25,9 +25,9 @@ def define_model(x_res, y_res):
 	model.compile(optimizer = Adam(lr=1e-4, decay=1e-5), loss='mean_squared_error')
 	return model
 
-def train(model, generator, n_epochs, batch_size, initial_epoch=0, callbacks=None):
+def train(model, generator, n_epochs, batch_size, initial_epoch=0, callbacks=None, multiprocessing=False):
 	history = model.fit_generator(generator, steps_per_epoch=np.ceil(101000/batch_size), epochs=n_epochs,
-						initial_epoch=initial_epoch, callbacks=callbacks)
+						initial_epoch=initial_epoch, callbacks=callbacks, use_multiprocessing=multiprocessing)
 	return history
 
 def custom_generator(color_generator, grayscale_generator):
@@ -42,10 +42,12 @@ if __name__ =='__main__':
 	batch_size = 32
 	print(model.summary())
 	datagen = ImageDataGenerator(horizontal_flip=True, preprocessing_function=simplify_img_random_vals,
-									rescale=1/255., validation_split=.2)
-	datagen_y = ImageDataGenerator(horizontal_flip=True, rescale=1/255., validation_split=.2)
-	generator = datagen.flow_from_directory('./imgs', target_size=(x_res, y_res), seed=123, batch_size=batch_size)
-	generator_y = datagen_y.flow_from_directory('./imgs', target_size=(x_res, y_res), seed=123, batch_size=batch_size)
+									rescale=1/255., validation_split=.2, channel_shift_range=.9)
+	datagen_y = ImageDataGenerator(horizontal_flip=True, rescale=1/255., validation_split=.2, channel_shift_range=.9)
+	generator = datagen.flow_from_directory('./imgs', target_size=(x_res, y_res), 
+							seed=123, batch_size=batch_size)
+	generator_y = datagen_y.flow_from_directory('./imgs', target_size=(x_res, y_res),
+							seed=123, batch_size=batch_size)
 	train_generator = custom_generator(generator, generator_y)
 	ckpt = ModelCheckpoint('./weights/epoch{epoch:02d}.hdf5', save_best_only=True)
 	tensorboard = TensorBoard(log_dir='./logs')

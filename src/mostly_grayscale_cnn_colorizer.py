@@ -25,15 +25,17 @@ def define_model(x_res, y_res):
 	model.compile(optimizer = Adam(lr=1e-4, decay=1e-5), loss='mean_squared_error')
 	return model
 
-def train(model, generator, n_epochs, batch_size, initial_epoch=0, callbacks=None, multiprocessing=False):
+def train(model, generator, n_epochs, batch_size, val_datagen=None, 
+		initial_epoch=0, callbacks=None, multiprocessing=False):
 	history = model.fit_generator(generator, steps_per_epoch=np.ceil(101000/batch_size), epochs=n_epochs,
-						initial_epoch=initial_epoch, callbacks=callbacks, use_multiprocessing=multiprocessing)
+						initial_epoch=initial_epoch, callbacks=callbacks, use_multiprocessing=multiprocessing,
+						validation_data=val_datagen, validation_steps=np.ceil(101000/batch_size)//1e2)
 	return history
 
 def custom_generator(color_generator, grayscale_generator):
 	while True:
-		x = color_generator.next()
-		y = grayscale_generator.next()
+		x = grayscale_generator.next()
+		y = color_generator.next()
 		yield (x[0],y[0])
 
 if __name__ =='__main__':
@@ -42,16 +44,25 @@ if __name__ =='__main__':
 	batch_size = 32
 	print(model.summary())
 	datagen = ImageDataGenerator(horizontal_flip=True, preprocessing_function=simplify_img_random_vals,
-									rescale=1/255., validation_split=.2, channel_shift_range=.9)
-	datagen_y = ImageDataGenerator(horizontal_flip=True, rescale=1/255., validation_split=.2, channel_shift_range=.9)
+									rescale=1/255., channel_shift_range=.9)
+	datagen_y = ImageDataGenerator(horizontal_flip=True, rescale=1/255., channel_shift_range=.9)
+	val_datagen = ImageDataGenerator(preprocessing_function=simplify_img_random_vals, rescale=1/255.,
+					)
+	val_datagen_y = ImageDataGenerator(rescale=1/255.)
 	generator = datagen.flow_from_directory('./imgs', target_size=(x_res, y_res), 
 							seed=123, batch_size=batch_size)
 	generator_y = datagen_y.flow_from_directory('./imgs', target_size=(x_res, y_res),
 							seed=123, batch_size=batch_size)
+	val_datagen = val_datagen.flow_from_directory('./imgs', target_size=(x_res, y_res),
+						shuffle=True, seed=456, batch_size=batch_size)
+	val_datagen_y = val_datagen_y.flow_from_directory('./imgs', target_size=(x_res, y_res),
+						shuffle=True, seed=456, batch_size=batch_size)
 	train_generator = custom_generator(generator, generator_y)
+	val_generator = custom_generator(val_datagen, val_datagen_y)
 	ckpt = ModelCheckpoint('./weights/epoch{epoch:02d}.hdf5', save_best_only=True)
 	tensorboard = TensorBoard(log_dir='./logs')
 
 
-	history = train(model, train_generator, 2, batch_size, callbacks=[ckpt, tensorboard])
+	history = train(model, train_generator, 2, batch_size, 
+		val_datagen=val_generator, callbacks=[ckpt, tensorboard])
 	np.save('history', history)

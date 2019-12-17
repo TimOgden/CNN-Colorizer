@@ -4,8 +4,9 @@ from keras.optimizers import Adam
 from keras.preprocessing.image import ImageDataGenerator
 from keras.callbacks import TensorBoard, ModelCheckpoint
 from img_removemostcolor import simplify_img_random_vals
+from mostly_gray_predict import show_output
 import numpy as np
-
+import matplotlib.pyplot as plt
 def define_model(x_res, y_res):
 	model = Sequential()
 	model.add(Conv2D(16, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal',
@@ -22,7 +23,7 @@ def define_model(x_res, y_res):
 	#model.add(UpSampling2D(size = (2,2)))
 	model.add(Conv2D(8, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal'))
 	model.add(Conv2D(3, 1, activation = 'sigmoid'))
-	model.compile(optimizer = Adam(lr=1e-4, decay=1e-5), loss='mean_squared_error')
+	model.compile(optimizer = Adam(lr=1e-4, decay=1e-5), loss='mean_absolute_error')
 	return model
 
 def train(model, generator, n_epochs, batch_size, val_datagen=None, 
@@ -32,10 +33,15 @@ def train(model, generator, n_epochs, batch_size, val_datagen=None,
 						validation_data=val_datagen, validation_steps=np.ceil(101000/batch_size)//1e2)
 	return history
 
-def custom_generator(color_generator, grayscale_generator):
+def custom_generator(color_generator, grayscale_generator, debug=False):
 	while True:
 		x = grayscale_generator.next()
 		y = color_generator.next()
+
+		if debug:
+			print('Grayscale shape:', x[0].shape)
+			print('Color shape:', y[0].shape)
+			show_output(x[0][23],y[0][23])
 		yield (x[0],y[0])
 
 if __name__ =='__main__':
@@ -43,11 +49,10 @@ if __name__ =='__main__':
 	model = define_model(x_res, y_res)
 	batch_size = 32
 	print(model.summary())
-	datagen = ImageDataGenerator(horizontal_flip=True, preprocessing_function=simplify_img_random_vals,
-									rescale=1/255., channel_shift_range=.9)
-	datagen_y = ImageDataGenerator(horizontal_flip=True, rescale=1/255., channel_shift_range=.9)
-	val_datagen = ImageDataGenerator(preprocessing_function=simplify_img_random_vals, rescale=1/255.,
-					)
+	datagen = ImageDataGenerator(preprocessing_function=simplify_img_random_vals,
+									rescale=1/255.)
+	datagen_y = ImageDataGenerator(rescale=1/255.)
+	val_datagen = ImageDataGenerator(preprocessing_function=simplify_img_random_vals, rescale=1/255.)
 	val_datagen_y = ImageDataGenerator(rescale=1/255.)
 	generator = datagen.flow_from_directory('./imgs', target_size=(x_res, y_res), 
 							seed=123, batch_size=batch_size)
@@ -57,12 +62,12 @@ if __name__ =='__main__':
 						shuffle=True, seed=456, batch_size=batch_size)
 	val_datagen_y = val_datagen_y.flow_from_directory('./imgs', target_size=(x_res, y_res),
 						shuffle=True, seed=456, batch_size=batch_size)
-	train_generator = custom_generator(generator, generator_y)
+	train_generator = custom_generator(generator, generator_y, debug=True)
 	val_generator = custom_generator(val_datagen, val_datagen_y)
-	ckpt = ModelCheckpoint('./weights/epoch{epoch:02d}.hdf5', save_best_only=True)
+	ckpt = ModelCheckpoint('./weights/epoch{epoch:02d}.hdf5', save_best_only=False)
 	tensorboard = TensorBoard(log_dir='./logs')
 
 
-	history = train(model, train_generator, 2, batch_size, 
-		val_datagen=val_generator, callbacks=[ckpt, tensorboard])
+	history = train(model, train_generator, 3, batch_size, 
+		val_datagen=val_generator, callbacks=[ckpt, tensorboard], initial_epoch=0)
 	np.save('history', history)
